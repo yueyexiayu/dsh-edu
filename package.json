@@ -1,6 +1,9 @@
 {
   "name": "dsh-edu",
-  "version": "0.1.1",
+  "version": "0.1.2",
+  "scripts": {
+    "test": "node --test"
+  },
   "private": true,
   "description": "DSH plugin: show GPT/Grok limits and DeepSeek/Zhipu balances in the composer dock.",
   "type": "module",

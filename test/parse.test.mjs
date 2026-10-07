@@ -10,6 +10,7 @@ import {
   parseUsageBody,
   parseZaiAccountReport,
   parseZaiTokenPackages,
+  toNum,
   windowName,
   zaiRouteFor,
 } from "../lib/parse.js";
@@ -78,14 +79,14 @@ test("parseGrokBilling reads SuperGrok weekly percent", () => {
   assert.equal(parsed.windows[0].resetsAt, new Date("2026-09-17T09:34:57.639108+00:00").toISOString());
 });
 
-test("parseGrokBilling treats omitted weekly percent as 0", () => {
+test("parseGrokBilling rejects omitted weekly percent instead of inventing zero", () => {
   const parsed = parseGrokBilling({
     config: {
       currentPeriod: { type: "USAGE_PERIOD_TYPE_WEEKLY", end: "2026-09-17T09:34:57.639Z" },
     },
   });
-  assert.equal(parsed.ok, true);
-  assert.equal(parsed.windows[0].utilization, 0);
+  assert.equal(parsed.ok, false);
+  assert.match(parsed.error, /用量/);
 });
 
 test("parseGrokBilling falls back to GrokBuild productUsage", () => {
@@ -170,7 +171,7 @@ test("parseZaiAccountReport rejects business errors", () => {
 });
 
 test("parseZaiTokenPackages keeps effective packages", () => {
-  const packages = parseZaiTokenPackages({
+  const parsed = parseZaiTokenPackages({
     code: 200,
     rows: [
       { resourcePackageName: "体验包", tokenBalance: 5000000, tokensMagnitude: 5000000, status: "EFFECTIVE" },
@@ -178,10 +179,127 @@ test("parseZaiTokenPackages keeps effective packages", () => {
       { tokenBalance: 100, tokensMagnitude: 100, status: "EFFECTIVE" },
     ],
   });
+  assert.equal(parsed.ok, true);
+  const { packages } = parsed;
   assert.equal(packages.length, 2);
   assert.equal(packages[0].remaining, 5000000);
   assert.equal(packages[0].total, 5000000);
   assert.equal(packages[1].remaining, 100);
+});
+
+test("toNum only accepts finite numbers and nonempty numeric strings", () => {
+  for (const value of [false, true, [], [1], {}, { valueOf: () => 12 }, "", "   ", null, undefined, NaN, Infinity, -Infinity, "Infinity", "nope"]) {
+    assert.equal(toNum(value), null, String(value));
+  }
+  for (const [value, expected] of [[0, 0], [-2.5, -2.5], [" 12.5 ", 12.5], ["1e3", 1000]]) {
+    assert.equal(toNum(value), expected);
+  }
+});
+
+function codexWindow(overrides = {}) {
+  return { used_percent: 12, limit_window_seconds: 18000, reset_at: 1738300000, ...overrides };
+}
+
+function assertParseFailure(parse, body) {
+  const parsed = parse(body);
+  assert.equal(parsed.ok, false);
+  assert.equal(typeof parsed.error, "string");
+  assert.ok(parsed.error.length > 0);
+}
+
+const badNumbers = [false, [], {}, "   ", Infinity];
+
+test("Codex validates percentages and does not hide one invalid window behind another", () => {
+  for (const used_percent of [...badNumbers, -1, 101]) {
+    assertParseFailure(parseUsageBody, { rate_limit: {
+      primary_window: codexWindow({ used_percent }),
+      secondary_window: codexWindow(),
+    } });
+  }
+  for (const used_percent of [0, 100, "12.5"]) {
+    assert.equal(parseUsageBody({ rate_limit: { primary_window: codexWindow({ used_percent }) } }).ok, true);
+  }
+});
+
+test("Codex validates window length and optional reset timestamps without throwing", () => {
+  for (const limit_window_seconds of [...badNumbers, null, undefined, -1, 0, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assertParseFailure(parseUsageBody, { rate_limit: { primary_window: codexWindow({ limit_window_seconds }) } });
+  }
+  for (const reset_at of [...badNumbers, -1, 1e20, 8640000000001]) {
+    assertParseFailure(parseUsageBody, { rate_limit: { primary_window: codexWindow({ reset_at }) } });
+  }
+  for (const reset_at of [undefined, null]) {
+    const parsed = parseUsageBody({ rate_limit: { primary_window: codexWindow({ reset_at }) } });
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.windows[0].resetsAt, null);
+  }
+  assert.equal(windowName(-1), null);
+  assert.equal(windowName("toString"), null);
+  assert.deepEqual(windowName(3600), { key: "1h", label: "1小时" });
+});
+
+test("Grok rejects invalid explicit usage instead of falling back or clamping", () => {
+  for (const creditUsagePercent of [...badNumbers, -1, 101]) {
+    assertParseFailure(parseGrokBilling, { config: {
+      creditUsagePercent,
+      productUsage: [{ product: "GrokBuild", usagePercent: 20 }],
+    } });
+  }
+  for (const usagePercent of [...badNumbers, -1, 101]) {
+    assertParseFailure(parseGrokBilling, { config: { productUsage: [{ product: "GrokBuild", usagePercent }] } });
+  }
+  assert.equal(parseGrokBilling({ config: { creditUsagePercent: 0 } }).windows[0].utilization, 0);
+});
+
+test("Grok invalid reset dates are explicit failures, while missing reset is optional", () => {
+  for (const end of ["not-a-date", "+999999-01-01T00:00:00Z", false, 1738300000]) {
+    assertParseFailure(parseGrokBilling, { config: { creditUsagePercent: 5, currentPeriod: { end } } });
+  }
+  const parsed = parseGrokBilling({ config: { creditUsagePercent: 5 } });
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.windows[0].resetsAt, null);
+});
+
+test("cash balances reject invalid values but preserve legitimate debt", () => {
+  for (const value of badNumbers) {
+    assertParseFailure(parseDeepSeekBalance, { balance_infos: [{ total_balance: value }] });
+    assertParseFailure(parseZaiAccountReport, { data: { availableBalance: value } });
+    assertParseFailure(parseDeepSeekBalance, { balance_infos: [{ total_balance: 2, granted_balance: value }] });
+    assertParseFailure(parseZaiAccountReport, { data: { availableBalance: 2, frozenBalance: value } });
+  }
+  assert.equal(parseDeepSeekBalance({ balance_infos: [{ total_balance: "-2.5", topped_up_balance: "-2.5" }] }).balance.total, -2.5);
+  assert.equal(parseZaiAccountReport({ data: { availableBalance: "-2.5" } }).balance.total, -2.5);
+  assertParseFailure(parseZaiAccountReport, { data: { availableBalance: 2, frozenBalance: -1 } });
+  assertParseFailure(parseZaiAccountReport, { data: { availableBalance: 2, totalSpendAmount: -1 } });
+});
+
+test("ZAI packages distinguish an explicit empty list from missing or failed data", () => {
+  assert.deepEqual(parseZaiTokenPackages({ code: 200, rows: [] }), { ok: true, packages: [] });
+  for (const body of [null, [], {}, { rows: null }, { rows: {} }, { code: 500, rows: [] }, { success: false, rows: [] }]) {
+    assertParseFailure(parseZaiTokenPackages, body);
+  }
+  assert.deepEqual(parseZaiTokenPackages({ success: false, msg: "业务失败", rows: [] }), { ok: false, error: "业务失败" });
+});
+
+test("ZAI packages do not silently discard malformed rows or impossible token counts", () => {
+  for (const row of [null, [], {}, { status: false }, { status: "EFFECTIVE" }]) {
+    assertParseFailure(parseZaiTokenPackages, { rows: [row] });
+  }
+  for (const tokenBalance of [...badNumbers, -1, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assertParseFailure(parseZaiTokenPackages, { rows: [{ status: "EFFECTIVE", tokenBalance }] });
+  }
+  for (const tokensMagnitude of [...badNumbers, -1, 0.5, Number.MAX_SAFE_INTEGER + 1, 9]) {
+    assertParseFailure(parseZaiTokenPackages, { rows: [{ status: "EFFECTIVE", tokenBalance: 10, tokensMagnitude }] });
+  }
+  assert.deepEqual(parseZaiTokenPackages({ rows: [{ status: "EFFECTIVE", tokenBalance: "0" }] }), {
+    ok: true, packages: [{ name: "Token 资源包", remaining: 0, total: null }],
+  });
+});
+
+test("zaiRouteFor rejects inherited keys and coercible objects", () => {
+  for (const provider of ["toString", "constructor", "__proto__", "hasOwnProperty", ["zai"], { toString: () => "zai" }]) {
+    assert.equal(zaiRouteFor(provider), null);
+  }
 });
 
 test("zaiRouteFor maps providers to hosts and key refs", () => {
