@@ -175,7 +175,7 @@ test("partial resource-package failures keep cash visible and expose warning det
     state: "partial_retry", retryAfterMs: 30000, balance: { total: 12.5, currency: "CNY", packages: null } }); await tick();
   const tree = c.render(); assert.match(text(tree), /¥12\.50/); assert.match(text(tree), /资源包查询失败/);
   assert.match(tree.props.title, /HTTP 503/);
-  c.advance(29999); assert.equal(c.requests.length, 1);
+  c.advance(1999); assert.equal(c.requests.length, 1);
   c.advance(1); assert.equal(c.requests.length, 2); c.dispose();
 });
 
@@ -197,4 +197,48 @@ test("missing, boolean and nonfinite numbers never render as zero or Infinity", 
 
 test("zero remains a valid displayed number", async () => {
   const c = client(); c.requests[0].resolve(quota(0)); await tick(); assert.match(text(c.render()), /0%/); c.dispose();
+});
+
+test("a visible successful reading is polled again within two seconds", async () => {
+  const c = client();
+  c.requests[0].resolve({ ...quota(11), credentialEpoch: 1, retryAfterMs: 180000 }); await tick();
+  assert.match(text(c.render()), /11%/);
+  c.advance(1999); assert.equal(c.requests.length, 1);
+  c.advance(1); assert.equal(c.requests.length, 2); c.dispose();
+});
+
+test("failures without a successful reading keep the existing retry backoff", async () => {
+  const c = client();
+  c.requests[0].resolve({ ok: true, isSupported: true, windows: null, balance: null, error: "暂时失败", retryAfterMs: 30000 }); await tick();
+  assert.match(text(c.render()), /暂时失败/);
+  c.advance(29999); assert.equal(c.requests.length, 1);
+  c.advance(1); assert.equal(c.requests.length, 2); c.dispose();
+});
+
+test("logout and credential epoch changes drop the previous successful reading", async () => {
+  const loggedOut = client();
+  loggedOut.requests[0].resolve({ ...quota(11), credentialEpoch: 1, retryAfterMs: 180000 }); await tick();
+  assert.match(text(loggedOut.render()), /11%/);
+  loggedOut.advance(2000);
+  loggedOut.requests[1].resolve({ ok: true, isSupported: true, credentialEpoch: 2, windows: null, balance: null, error: "未登录 ChatGPT / Codex" }); await tick();
+  assert.match(text(loggedOut.render()), /未登录/);
+  assert.doesNotMatch(text(loggedOut.render()), /11%/);
+  loggedOut.dispose();
+
+  const expired = client();
+  expired.requests[0].resolve({ ...quota(28), credentialEpoch: 4 }); await tick();
+  expired.advance(2000);
+  expired.requests[1].resolve({ ok: true, isSupported: true, credentialEpoch: 4, windows: null, balance: null, error: "凭证已过期，请先用 GPT 发一条消息让 DSH 续期后再刷新" }); await tick();
+  assert.match(text(expired.render()), /已过期/);
+  assert.doesNotMatch(text(expired.render()), /28%/);
+  expired.dispose();
+
+  const epoch = client();
+  epoch.requests[0].resolve({ ok: true, isSupported: true, credentialEpoch: 1, balance: { total: 12.5, currency: "CNY", packages: [] } }); await tick();
+  assert.match(text(epoch.render()), /12\.50/);
+  epoch.advance(2000);
+  epoch.requests[1].resolve({ ok: true, isSupported: true, credentialEpoch: 2, windows: null, balance: null, error: "账号或模型已切换，正在重新查询" }); await tick();
+  assert.match(text(epoch.render()), /已切换/);
+  assert.doesNotMatch(text(epoch.render()), /12\.50/);
+  epoch.dispose();
 });

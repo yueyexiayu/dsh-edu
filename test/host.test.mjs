@@ -50,11 +50,34 @@ test("switching GPT credentials invalidates cached quota without waiting three m
 test("logout cannot keep displaying the old account quota", async (t) => {
   t.mock.method(globalThis, "fetch", async () => usage(28));
   const h = host({ records: { [CODEX_RECORD_KEY]: grant("account-a") } });
-  await h.call();
+  const first = await h.call();
+  assert.equal(first.credentialEpoch, 0);
   delete h.records[CODEX_RECORD_KEY];
+  h.emit("credentials/record-updated", CODEX_RECORD_KEY);
   const result = await h.call();
   assert.equal(result.windows, null);
+  assert.equal(result.credentialEpoch, 1);
   assert.match(result.error, /未登录/);
+  assert.equal(JSON.stringify(result).includes("account-a"), false);
+  assert.equal(Object.hasOwn(result, "access"), false);
+  assert.equal(Object.hasOwn(result, "accountId"), false);
+  assert.equal(Object.hasOwn(result, "key"), false);
+  h.dispose();
+});
+
+test("credential events increment credentialEpoch on every edu response", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => usage(11));
+  const h = host({ provider: "other" });
+  const unsupported = await h.call();
+  assert.equal(unsupported.isSupported, false);
+  assert.equal(unsupported.credentialEpoch, 0);
+  h.emit("credentials/record-updated", CODEX_RECORD_KEY);
+  h.emit("credentials/reference-updated", "DEEPSEEK_API_KEY");
+  const after = await h.call();
+  assert.equal(after.credentialEpoch, 2);
+  assert.equal(Object.hasOwn(after, "access"), false);
+  assert.equal(Object.hasOwn(after, "accountId"), false);
+  assert.equal(Object.hasOwn(after, "key"), false);
   h.dispose();
 });
 
