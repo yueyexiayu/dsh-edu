@@ -1,29 +1,45 @@
-# dsh-edu
+<div align="center">
+<img src="docs/repo-assets/hero.svg" width="100%" alt="当前模型路由、官方额度和余额显示的原创示意，非真实账号截图" />
+<h1>dsh-edu · 额度与余额</h1>
+<p><strong>看清正在使用的模型，还剩多少额度。</strong></p>
+<p>DeepSeek Harness 输入框下方的会话感知额度读数。</p>
+<p><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
+<p><a href="package.json">v0.1.2</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="#核心能力">核心能力</a> · <a href="#工作方式">工作方式</a> · <a href="#快速开始">快速开始</a> · <a href="#凭据与刷新">凭据与刷新</a> · <a href="#验证">验证</a></p>
+</div>
 
-当前项目是深度适配个人使用，项目只是给大家提供思路和借鉴，尽量不要直接照搬。
+---
 
-在 DeepSeek Harness 输入框下方显示当前模型对应的额度或余额：
+为个人 DSH 桌面工作流提供参考实现，不是通用账单平台。只查询当前支持的提供方，不以其他账号的余额冒充当前模型路由。所有凭据留在 Host，浏览器仅访问 `/api/dsh-edu`。
 
-- **ChatGPT Codex**：5 小时 / 7 天限额
-- **Grok / SuperGrok**：周限额
-- **DeepSeek 官方 API**：账户余额
-- **智谱 GLM（bigmodel / z.ai）**：现金余额（悬停可看生效的 Token 资源包）
+## 核心能力
 
-面向 **官方桌面**（`connection.fetch`）。不另存 token，只在 Host 侧通过 DSH `credentials` 读取本机已有凭据；浏览器只请求 `/api/dsh-edu`，响应不含密钥。不支持的提供方不显示、也不请求其官方额度接口。
+<table><tr>
+<td width="33%"><strong>📊 模型对应读数</strong><br/><br/>Codex 的5小时/7天限额，Grok/SuperGrok 周限额，DeepSeek API 与智谱现金余额。</td>
+<td width="33%"><strong>🔄 跟随会话切换</strong><br/><br/>官方 modelSelection.next 投影优先；切换模型清除旧数字，不混用默认账号。</td>
+<td width="33%"><strong>🧩 部分失败可见</strong><br/><br/>智谱资源包失败保留已确认现金，并显示警告；未知不显示为零。</td>
+</tr><tr>
+<td><strong>⏱ 有界缓存</strong><br/><br/>提供方与实际凭据成功结果缓存3分钟；同账号并发共用查询。</td>
+<td><strong>🛡 凭据留在 Host</strong><br/><br/>沿用 DSH credentials，不另存 token，不读取其他客户端认证文件。</td>
+<td><strong>🌙 后台暂停</strong><br/><br/>串行轮询、前台恢复立即刷新，资源包失败短退避，不无限重叠请求。</td>
+</tr></table>
 
-## 查询与显示
+## 工作方式
 
-- 会话模型优先使用官方 `modelSelection.next` 投影，再使用历史请求的模型；已存在且尚无选择或历史请求的新会话使用默认模型。会话不存在、投影服务不可用或读取失败时明确报错，不改查无关的默认账号。客户端通过会话槽位的 `useProjection` 立即响应模型切换，清除旧读数。
-- 成功结果按提供方和实际凭据缓存 **3 分钟**，每次请求先核对当前凭据。换号、退出、续期、修改凭据或路由配置会使旧结果失效；旧请求晚返回不会恢复旧读数。同账号并发请求共用一次查询。
-- 智谱现金与资源包各自缓存成功结果。资源包查询失败时保留已确认的现金，内联显示“资源包查询失败”，悬停可看原因；约 **30 秒**后重试失败分项，不重复请求缓存有效的现金。`packages: null` 表示查询失败，`packages: []` 才表示已确认无生效资源包。API 用 `warning`、`state: "partial_retry"` 和 `retryAfterMs` 表达这类部分失败。
-- 客户端采用完成后再调度的串行轮询，普通前台轮询间隔 **2 秒**，不支持的提供方为 **30 秒**；模型投影变化立即查询。后台暂停，恢复前台立即刷新；部分失败按 Host 返回的退避时间重试。单次浏览器请求 **20 秒**超时，超时、HTTP 或解析错误均清除旧数字并显示错误，不永久丢弃慢响应。
-- 未知用量不当成 `0%`，非法数值不当成零。解析器拒绝布尔值、数组、对象、非法百分比和越界日期；保留真实的负现金余额。路由匹配只接受明确支持的自有键。
+![会话模型选择确定凭据归属，再查询提供方并缓存、显示额度或明确错误。](docs/repo-assets/workflow.zh-CN.svg)
 
-不读取 `~/.grok/auth.json` / `~/.codex/auth.json`。
+会话投影优先于历史模型；已存在但尚无选择或请求的新会话才采用默认模型。会话不存在或投影服务失败时明确报错，不查询无关默认账号。
 
-## 安装
+## 快速开始
 
-复制到 `$DSH_HOME/plugins/dsh-edu`（默认 `$DSH_HOME` 为 `~/.dsh`），在 `$DSH_HOME/profiles/desktop/cordis.patch.yml` 写入：
+需要兼容官方会话投影/槽位 API 的 DeepSeek Harness 桌面端，以及已配置的对应模型凭据。
+
+```sh
+export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
+git clone https://github.com/yueyexiayu/dsh-edu.git "$DSH_HOME/plugins/dsh-edu"
+```
+
+将以下项合并到 `$DSH_HOME/profiles/desktop/cordis.patch.yml`：
 
 ```yaml
 - insert:
@@ -31,25 +47,42 @@
       name: ../../plugins/dsh-edu/lib/index.js
 ```
 
-**完全退出 DeepSeek Harness（macOS：⌘Q）再打开。** 仅刷新页面不会完整重载 Host 和 Client 插件。
+不要覆盖其他插件。**⌘Q 完全退出 DSH 后重开**，选择受支持模型，在输入框下方核对读数；仅刷新页面不完整重载 Host/Client。
 
-凭据沿用当前模型路由，通过官方 `llm` 元数据和 `settings.describe()` 读取配置：
+## 凭据与刷新
 
-- GPT/Grok 使用 `llm-pi-ai/openai-codex` / `llm-pi-ai/xai` 的 OAuth 凭据。路由显式指定 API Key 时不展示其他 OAuth 账号的限额。
-- DeepSeek 官方 API 使用路由的 `apiKeyEnv`，默认 `DEEPSEEK_API_KEY`。
-- pi-ai 的 DeepSeek、智谱路由依次使用显式 `apiKeyEnv`、该路由存储的 API Key、原生凭据引用（`DEEPSEEK_API_KEY`、`ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY`）。显式引用缺失时显示错误，禁止改用其他账号的默认 Key。
-- 自定义服务地址、覆盖认证请求头或无法确认凭据的旧路由会显示归属错误，不拿官方账号余额冒充该路由余额。
+| 项目 | 行为 |
+| --- | --- |
+| GPT / Grok | `llm-pi-ai/openai-codex` / `llm-pi-ai/xai` OAuth；显式 API Key 路由不借用其他 OAuth 账号 |
+| DeepSeek 官方 API | 路由的 `apiKeyEnv`，默认 `DEEPSEEK_API_KEY` |
+| pi-ai DeepSeek / 智谱 | 显式引用 → 路由保存 Key → 原生凭据引用；显式引用缺失时失败 |
+| 智谱引用 | `ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY` |
+| 前台轮询 | 普通2秒；不支持提供方30秒；单次 Client 请求20秒上限 |
+| 资源包部分失败 | 返回 `warning`、`state: partial_retry` 与 `retryAfterMs`，约30秒后重试失败分项 |
 
-官方 `deepseek-account` 登录账户余额继续由官方界面提供，插件的 DeepSeek 余额用于 API Key 路由。
+<details>
+<summary><strong>账号隔离与严格显示规则</strong></summary>
 
-## 开发与验证
+换号、退出、续期或修改路由/凭据会使旧缓存失效；旧请求晚返回不能恢复旧读数。智谱现金和资源包分别缓存，`packages: null` 是失败，`[]` 才是确认没有生效资源包。
 
-```bash
-for file in lib/*.js; do node --check "$file"; done
+不支持的提供方不显示、不发官方查询。自定义服务地址、覆盖认证头或无法确定归属的旧路由明确显示错误。未知用量不当作0%，非法数值不当作零；拒绝非法百分比、日期和错误类型，同时保留真实负现金余额。
+
+不读取 `~/.grok/auth.json` 或 `~/.codex/auth.json`。官方 `deepseek-account` 登录账号余额由官方界面提供，本插件的 DeepSeek 余额针对 API Key 路由。
+
+</details>
+
+## 验证
+
+```sh
+cd "$DSH_HOME/plugins/dsh-edu"
+for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
-# 或 npm test
 ```
 
-测试使用模拟凭据和官方接口响应，不读取真实凭据、不调用真实额度接口。覆盖模型投影优先级、新会话默认模型、独立缓存与短退避、账号切换和晚响应保护、串行轮询与后台暂停、部分失败显示及严格解析。
+产品测试使用模拟凭据与接口响应，不读取真实账号、不调用实际额度服务；覆盖切换、缓存、晚响应、部分失败和解析边界。历史0.1.2浏览器夹具验证不等于真实账号端到端验收。**本次只做文档与排版检查，未重跑产品测试或重启桌面。**
 
-0.1.2 的修复针对 DSH 0.2.1-alpha.1 的公开投影和会话槽位 API。隔离浏览器夹具已验证实际客户端的慢响应展示、模型切换、资源包警告、未知用量错误及轮询生命周期；这不等同于已重启桌面或真实账号端到端验收。桌面更新后仍需完全退出再打开，并在自己的账号上确认显示。
+## 许可
+
+按 [MIT License](LICENSE) 发布。卸载时只移除本插件的 desktop patch 项，再完全重启；不要删除其他插件或正式凭据。
+
+<div align="center"><sub>读数有归属，未知不冒充零。 · <a href="README.en.md">Read in English →</a></sub></div>
