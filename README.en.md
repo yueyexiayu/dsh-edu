@@ -4,7 +4,7 @@
 <p><strong>See the remaining allowance for the model you are actually using.</strong></p>
 <p>Session-aware quota readouts beneath the DeepSeek Harness composer.</p>
 <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-<p><a href="package.json">v0.1.2</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="package.json">v0.1.3</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
 <p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
 </div>
 
