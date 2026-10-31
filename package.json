@@ -1,6 +1,6 @@
 {
   "name": "dsh-edu",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "scripts": {
     "test": "node --test"
   },
@@ -11,7 +11,8 @@
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
   },
   "dsh": {
     "bundle": {
