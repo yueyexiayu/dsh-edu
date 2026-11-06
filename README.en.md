@@ -4,7 +4,7 @@
 <p><strong>See the remaining allowance for the model you are actually using.</strong></p>
 <p>Session-aware quota readouts beneath the DeepSeek Harness composer.</p>
 <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-<p><a href="package.json">v0.1.5</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="package.json">v0.1.6</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
 <p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
 </div>
 
@@ -54,7 +54,7 @@ Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Select a 
 | Item | Behavior |
 | --- | --- |
 | GPT / Grok | `llm-pi-ai/openai-codex` / `llm-pi-ai/xai` OAuth; explicit API Key routes do not borrow another OAuth account |
-| OpenCode Go | When the route `baseURL` is `https://opencode.ai/inference/go/...`, the same `OPENCODE_API_KEY` reads `/zen/go/v1/usage`. Percentages only: no plan tier and no Zen cash balance |
+| OpenCode Go | Covers both the shipped `opencode-go` route (adapter default endpoint when no `baseURL` is set) and a custom `https://opencode.ai/inference/go/...` route; the route's `apiKeyEnv` (for example `OPENCODE_GO_API_KEY`) reads `/zen/go/v1/usage`. Percentages only: no plan tier and no Zen cash balance. An explicit custom gateway address is not claimed |
 | Official DeepSeek API | Route `apiKeyEnv`, defaulting to `DEEPSEEK_API_KEY` |
 | pi-ai DeepSeek / Zhipu | Explicit reference → stored route Key → native reference; a missing explicit reference fails |
 | Zhipu references | `ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY` |
@@ -80,7 +80,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure and parser boundaries. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and product tests and validated parsing against the real OpenCode Go usage endpoint. The desktop was not restarted, so the Host change is not yet loaded in the running app.**
+Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure and parser boundaries. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 103 product tests and validated parsing against the real OpenCode Go usage endpoint for a shipped route with no `baseURL`. The desktop was not restarted, so the Host change is not yet loaded in the running app.**
 
 ## License
 

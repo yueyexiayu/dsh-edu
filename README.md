@@ -4,7 +4,7 @@
 <p><strong>看清正在使用的模型，还剩多少额度。</strong></p>
 <p>DeepSeek Harness 输入框下方的会话感知额度读数。</p>
 <p><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
-<p><a href="package.json">v0.1.5</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="package.json">v0.1.6</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
 <p><a href="#核心能力">核心能力</a> · <a href="#工作方式">工作方式</a> · <a href="#快速开始">快速开始</a> · <a href="#凭据与刷新">凭据与刷新</a> · <a href="#验证">验证</a></p>
 </div>
 
@@ -54,7 +54,7 @@ git clone https://github.com/yueyexiayu/dsh-edu.git "$DSH_HOME/plugins/dsh-edu"
 | 项目 | 行为 |
 | --- | --- |
 | GPT / Grok | `llm-pi-ai/openai-codex` / `llm-pi-ai/xai` OAuth；显式 API Key 路由不借用其他 OAuth 账号 |
-| OpenCode Go | 路由 `baseURL` 为 `https://opencode.ai/inference/go/...` 时，用同一 `OPENCODE_API_KEY` 查询 `/zen/go/v1/usage`；只显示百分比，不含套餐档位与 Zen 现金余额 |
+| OpenCode Go | 内置的 `opencode-go` 路由（无 `baseURL` 时用适配器默认地址）与自定义 `https://opencode.ai/inference/go/...` 路由都识别；用该路由的 `apiKeyEnv`（如 `OPENCODE_GO_API_KEY`）查询 `/zen/go/v1/usage`。只显示百分比，不含套餐档位与 Zen 现金余额；显式写了自定义网关地址时不认领 |
 | DeepSeek 官方 API | 路由的 `apiKeyEnv`，默认 `DEEPSEEK_API_KEY` |
 | pi-ai DeepSeek / 智谱 | 显式引用 → 路由保存 Key → 原生凭据引用；显式引用缺失时失败 |
 | 智谱引用 | `ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY` |
@@ -80,7 +80,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-产品测试使用模拟凭据与接口响应，不读取真实账号、不调用实际额度服务；覆盖切换、缓存、晚响应、部分失败和解析边界。历史0.1.2浏览器夹具验证不等于真实账号端到端验收。**本次已重跑语法检查与产品测试，并用真实 OpenCode Go 用量接口验证解析；桌面端尚未重启，当前运行中的 Host 未加载本次改动。**
+产品测试使用模拟凭据与接口响应，不读取真实账号、不调用实际额度服务；覆盖切换、缓存、晚响应、部分失败和解析边界。历史0.1.2浏览器夹具验证不等于真实账号端到端验收。**本次已重跑语法检查与产品测试（103 项），并用真实 OpenCode Go 用量接口验证「无 baseURL 的内置路由」解析；桌面端尚未重启，当前运行中的 Host 未加载本次改动。**
 
 ## 许可
 

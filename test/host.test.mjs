@@ -8,7 +8,7 @@ const grant = (access, accountId = access) => ({ kind: "grant", payload: { type:
 const usage = (used) => Response.json({ rate_limit: { primary_window: { used_percent: used, limit_window_seconds: 18000 } } });
 const balance = (total) => Response.json({ is_available: true, balance_infos: [{ currency: "CNY", total_balance: String(total) }] });
 
-function host({ provider = "openai-codex", records = {}, refs = {}, routeConfig = {}, settingsNs = "custom-model-entry", settingsPath = ["providers", provider], services = {} } = {}) {
+function host({ provider = "openai-codex", records = {}, refs = {}, routeConfig = {}, settingsNs = "custom-model-entry", settingsPath = ["providers", provider], metadata = {}, services = {} } = {}) {
   const selection = { provider, model: "test-model" };
   let handler;
   let dispose;
@@ -21,7 +21,7 @@ function host({ provider = "openai-codex", records = {}, refs = {}, routeConfig 
     get(name) {
       if (Object.hasOwn(services, name)) return services[name];
       if (name === "agentDefaultModel") return { currentSelection: () => selection };
-      if (name === "llm" && routeConfig !== undefined) return { listConfigurableProviders: () => [{ provider, settingsNs, settingsPath }] };
+      if (name === "llm" && routeConfig !== undefined) return { listConfigurableProviders: () => [{ provider, settingsNs, settingsPath, ...metadata }] };
       if (name === "settings" && routeConfig !== undefined) {
         const value = settingsPath.reduceRight((child, key) => ({ [key]: child }), routeConfig);
         return { describe: () => [{ ns: settingsNs, revision: 0, value }] };
@@ -527,6 +527,44 @@ const OPENCODE_ROUTE = {
   baseURL: "https://opencode.ai/inference/go/openai/v1",
   apiKeyEnv: "OPENCODE_API_KEY",
 };
+
+test("the adapter's shipped opencode-go route needs no baseURL of its own", async (t) => {
+  const calls = [];
+  t.mock.method(globalThis, "fetch", async (url, init) => {
+    calls.push(url);
+    assert.equal(init.headers.authorization, "Bearer oc-key");
+    return opencodeUsage();
+  });
+  const h = host({
+    provider: "opencode-go",
+    routeConfig: { apiKeyEnv: "OPENCODE_GO_API_KEY" },
+    metadata: { defaultBaseURL: "https://opencode.ai/inference/go", declared: false },
+    refs: { OPENCODE_GO_API_KEY: "oc-key" },
+  });
+  const result = await h.call();
+  assert.equal(result.ok, true);
+  assert.equal(result.isSupported, true);
+  assert.equal(result.provider, "opencode-go");
+  assert.deepEqual(result.windows.map((w) => [w.key, w.utilization]), [["5h", 12], ["7d", 34], ["30d", 56]]);
+  assert.deepEqual(calls, [OPENCODE_GO_USAGE_URL]);
+  h.dispose();
+});
+
+test("an explicit gateway address overrides the shipped opencode-go default", async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => { calls++; return opencodeUsage(); });
+  const h = host({
+    provider: "opencode-go",
+    routeConfig: { baseURL: "https://gateway.example/v1", apiKeyEnv: "OPENCODE_GO_API_KEY" },
+    metadata: { defaultBaseURL: "https://opencode.ai/inference/go" },
+    refs: { OPENCODE_GO_API_KEY: "oc-key" },
+  });
+  const result = await h.call();
+  assert.equal(result.isSupported, false);
+  assert.equal(result.windows, undefined);
+  assert.equal(calls, 0);
+  h.dispose();
+});
 
 test("OpenCode Go usage shows rolling, weekly and monthly windows for its route", async (t) => {
   const calls = [];

@@ -324,6 +324,23 @@ test("opencodeGoRouteFor only accepts the official Go inference route", () => {
   }
 });
 
+test("opencodeGoRouteFor uses the adapter default when the profile sets no endpoint", () => {
+  const options = { provider: "opencode-go", defaultBaseURL: "https://opencode.ai/inference/go" };
+  assert.deepEqual(opencodeGoRouteFor({ apiKeyEnv: "OPENCODE_GO_API_KEY" }, options), { base: "https://opencode.ai" });
+  assert.equal(opencodeGoRouteFor({}, { ...options, defaultBaseURL: "https://gateway.example/v1" }), null);
+  assert.deepEqual(opencodeGoRouteFor({}, { provider: "opencode-go" }), { base: "https://opencode.ai" });
+  assert.equal(opencodeGoRouteFor({}, { provider: "opencode" }), null);
+  assert.equal(opencodeGoRouteFor({}, {}), null);
+  assert.equal(opencodeGoRouteFor(undefined, { provider: "opencode-go-evil" }), null);
+});
+
+test("an explicit endpoint wins over the shipped default and never falls back to the route id", () => {
+  const options = { provider: "opencode-go", defaultBaseURL: "https://opencode.ai/inference/go" };
+  assert.deepEqual(opencodeGoRouteFor({ baseURL: "https://opencode.ai/inference/go/anthropic" }, options), { base: "https://opencode.ai" });
+  assert.equal(opencodeGoRouteFor({ baseURL: "https://proxy.example/v1" }, options), null);
+  assert.deepEqual(opencodeGoRouteFor({ baseURL: 42 }, options), { base: "https://opencode.ai" });
+});
+
 test("parseOpencodeGoUsage reads the nested Go usage windows", () => {
   const parsed = parseOpencodeGoUsage({
     usage: {
