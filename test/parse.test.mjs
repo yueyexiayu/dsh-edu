@@ -5,8 +5,10 @@ import {
   isDeepSeekProvider,
   oauthAccessFromRecord,
   oauthFromRecord,
+  opencodeGoRouteFor,
   parseDeepSeekBalance,
   parseGrokBilling,
+  parseOpencodeGoUsage,
   parseUsageBody,
   parseZaiAccountReport,
   parseZaiTokenPackages,
@@ -307,4 +309,65 @@ test("zaiRouteFor maps providers to hosts and key refs", () => {
   assert.equal(zaiRouteFor("zai-coding-cn").keyRef, "ZAI_CODING_CN_API_KEY");
   assert.equal(zaiRouteFor("zai").base, "https://api.z.ai");
   assert.equal(zaiRouteFor("deepseek-official"), null);
+});
+
+test("opencodeGoRouteFor only accepts the official Go inference route", () => {
+  assert.deepEqual(opencodeGoRouteFor({ baseURL: "https://opencode.ai/inference/go/openai/v1" }), { base: "https://opencode.ai" });
+  assert.deepEqual(opencodeGoRouteFor({ baseURL: "https://opencode.ai/inference/go/anthropic/v1" }), { base: "https://opencode.ai" });
+  for (const baseURL of [
+    undefined, null, "", "   ", "http://opencode.ai/inference/go/openai/v1",
+    "https://opencode.ai/inference/openai/v1", "https://opencode.ai/zen/v1",
+    "https://api.opencode.ai/inference/go/openai/v1", "https://opencode.ai.evil.example/inference/go/openai/v1",
+    "https://user:pass@opencode.ai/inference/go/openai/v1", "not a url",
+  ]) {
+    assert.equal(opencodeGoRouteFor({ baseURL }), null, String(baseURL));
+  }
+});
+
+test("parseOpencodeGoUsage reads the nested Go usage windows", () => {
+  const parsed = parseOpencodeGoUsage({
+    usage: {
+      rolling: { status: "ok", percent: 12, resetsAt: "2026-11-07T01:00:00.000Z" },
+      weekly: { status: "ok", percent: 34, resetsAt: "2026-11-10T00:00:00.000Z" },
+      monthly: { status: "ok", percent: 56, resetsAt: "2026-12-06T00:00:00.000Z" },
+    },
+  });
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.planType, "OpenCode Go");
+  assert.deepEqual(parsed.windows.map((w) => [w.key, w.label, w.utilization]), [
+    ["5h", "5小时", 12],
+    ["7d", "7天", 34],
+    ["30d", "30天", 56],
+  ]);
+  assert.equal(parsed.windows[0].resetsAt, new Date("2026-11-07T01:00:00.000Z").toISOString());
+});
+
+test("parseOpencodeGoUsage still reads the legacy top-level shape and resetInSec", () => {
+  const parsed = parseOpencodeGoUsage({
+    rollingUsage: { usagePercent: 5, resetInSec: 3600 },
+    weeklyUsage: { usagePercent: 6, resetInSec: 7200 },
+    monthlyUsage: { usagePercent: 7, resetInSec: 10800 },
+  }, 1_000_000);
+  assert.equal(parsed.ok, true);
+  assert.deepEqual(parsed.windows.map((w) => w.utilization), [5, 6, 7]);
+  assert.equal(parsed.windows[0].resetsAt, new Date(1_000_000 + 3_600_000).toISOString());
+});
+
+test("parseOpencodeGoUsage keeps missing optional reset and rejects invalid values", () => {
+  const optional = parseOpencodeGoUsage({ usage: { rolling: { percent: 0 }, weekly: { percent: 1 } } });
+  assert.equal(optional.ok, true);
+  assert.equal(optional.windows.length, 2);
+  assert.equal(optional.windows[0].resetsAt, null);
+  for (const percent of [...badNumbers, -1, 101]) {
+    assertParseFailure((body) => parseOpencodeGoUsage(body), { usage: { rolling: { percent } } });
+  }
+  for (const resetsAt of ["not-a-date", 1738300000, false]) {
+    assertParseFailure((body) => parseOpencodeGoUsage(body), { usage: { rolling: { percent: 1, resetsAt } } });
+  }
+  for (const resetInSec of [...badNumbers, -1]) {
+    assertParseFailure((body) => parseOpencodeGoUsage(body), { usage: { rolling: { percent: 1, resetInSec } } });
+  }
+  for (const body of [null, [], {}, { usage: null }, { usage: { rolling: [] } }, { usage: { rolling: {} } }]) {
+    assertParseFailure((body) => parseOpencodeGoUsage(body), body);
+  }
 });

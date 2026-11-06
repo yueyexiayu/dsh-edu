@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { apply } from "../lib/index.js";
 import { credentialSource } from "../lib/credentials.js";
-import { CODEX_RECORD_KEY, CODEX_USAGE_URL, DEEPSEEK_BALANCE_URL, GROK_RECORD_KEY, GROK_USER_URL, GROK_BILLING_URL, ZAI_ACCOUNT_REPORT_PATH, ZAI_TOKEN_ACCOUNTS_PATH } from "../lib/parse.js";
+import { CODEX_RECORD_KEY, CODEX_USAGE_URL, DEEPSEEK_BALANCE_URL, GROK_RECORD_KEY, GROK_USER_URL, GROK_BILLING_URL, OPENCODE_GO_USAGE_URL, ZAI_ACCOUNT_REPORT_PATH, ZAI_TOKEN_ACCOUNTS_PATH } from "../lib/parse.js";
 
 const grant = (access, accountId = access) => ({ kind: "grant", payload: { type: "oauth", access, accountId } });
 const usage = (used) => Response.json({ rate_limit: { primary_window: { used_percent: used, limit_window_seconds: 18000 } } });
@@ -514,5 +514,115 @@ test("a session projection read failure during the query discards the response",
   finish(usage(11));
   assert.equal((await pending).windows, null);
   assert.equal((await h.call("current")).ok, false);
+  h.dispose();
+});
+
+const opencodeUsage = () => Response.json({ usage: {
+  rolling: { status: "ok", percent: 12, resetsAt: "2026-11-07T01:00:00.000Z" },
+  weekly: { status: "ok", percent: 34, resetsAt: "2026-11-10T00:00:00.000Z" },
+  monthly: { status: "ok", percent: 56, resetsAt: "2026-12-06T00:00:00.000Z" },
+} });
+
+const OPENCODE_ROUTE = {
+  baseURL: "https://opencode.ai/inference/go/openai/v1",
+  apiKeyEnv: "OPENCODE_API_KEY",
+};
+
+test("OpenCode Go usage shows rolling, weekly and monthly windows for its route", async (t) => {
+  const calls = [];
+  t.mock.method(globalThis, "fetch", async (url, init) => {
+    calls.push(url);
+    assert.equal(init.headers.authorization, "Bearer oc-key");
+    return opencodeUsage();
+  });
+  const h = host({ provider: "opencode", routeConfig: OPENCODE_ROUTE, refs: { OPENCODE_API_KEY: "oc-key" } });
+  const result = await h.call();
+  assert.equal(result.ok, true);
+  assert.equal(result.isSupported, true);
+  assert.equal(result.provider, "opencode");
+  assert.equal(result.balance, null);
+  assert.equal(result.planType, "OpenCode Go");
+  assert.deepEqual(result.windows.map((w) => [w.key, w.utilization]), [["5h", 12], ["7d", 34], ["30d", 56]]);
+  assert.equal(result.windows[0].resetsAt, new Date("2026-11-07T01:00:00.000Z").toISOString());
+  assert.deepEqual(calls, [OPENCODE_GO_USAGE_URL]);
+  assert.equal(JSON.stringify(result).includes("oc-key"), false);
+  h.dispose();
+});
+
+test("OpenCode Go is recognized by the official route even when the provider is renamed", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url) => {
+    assert.equal(url, OPENCODE_GO_USAGE_URL);
+    return opencodeUsage();
+  });
+  const h = host({
+    provider: "my-gateway",
+    routeConfig: { baseURL: "https://opencode.ai/inference/go/openai/v1", apiKeyEnv: "MY_GO_KEY" },
+    refs: { MY_GO_KEY: "oc-key" },
+  });
+  const result = await h.call();
+  assert.equal(result.isSupported, true);
+  assert.equal(result.windows.length, 3);
+  h.dispose();
+});
+
+test("a provider merely named opencode is not attributed to OpenCode Go", async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => { calls++; return Response.json({}); });
+  const h = host({
+    provider: "opencode",
+    routeConfig: { baseURL: "https://gateway.example/v1", apiKeyEnv: "OPENCODE_API_KEY" },
+    refs: { OPENCODE_API_KEY: "oc-key" },
+  });
+  const result = await h.call();
+  assert.equal(result.ok, true);
+  assert.equal(result.isSupported, false);
+  assert.equal(result.windows, undefined);
+  assert.equal(calls, 0);
+  h.dispose();
+});
+
+test("OpenCode Go routes require their own key instead of another account's default", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => { assert.fail("must not query with another key"); });
+  const h = host({
+    provider: "opencode",
+    routeConfig: { baseURL: "https://opencode.ai/inference/go/openai/v1" },
+    refs: { DEEPSEEK_API_KEY: "other-account-key" },
+  });
+  const result = await h.call();
+  assert.equal(result.windows, null);
+  assert.match(result.error, /OpenCode Go/);
+  assert.equal(JSON.stringify(result).includes("other-account-key"), false);
+  h.dispose();
+});
+
+for (const [status, pattern] of [[401, /OpenCode API Key/], [403, /未订阅 OpenCode Go/]]) {
+  test(`OpenCode Go HTTP ${status} is explained without echoing the key`, async (t) => {
+    t.mock.method(globalThis, "fetch", async () => new Response("failure", { status }));
+    const h = host({ provider: "opencode", routeConfig: OPENCODE_ROUTE, refs: { OPENCODE_API_KEY: "oc-secret-key" } });
+    const result = await h.call();
+    assert.equal(result.windows, null);
+    assert.match(result.error, pattern);
+    assert.equal(JSON.stringify(result).includes("oc-secret-key"), false);
+    h.dispose();
+  });
+}
+
+test("OpenCode Go usage is cached for three minutes and follows credential switches", async (t) => {
+  let now = 1_000_000;
+  let calls = 0;
+  t.mock.method(Date, "now", () => now);
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    calls++;
+    return opencodeUsage();
+  });
+  const h = host({ provider: "opencode", routeConfig: OPENCODE_ROUTE, refs: { OPENCODE_API_KEY: "oc-key" } });
+  assert.equal((await h.call()).windows[0].utilization, 12);
+  now += 30_000;
+  assert.equal((await h.call()).windows[0].utilization, 12);
+  assert.equal(calls, 1);
+  h.refs.OPENCODE_API_KEY = "oc-key-2";
+  h.emit("credentials/reference-updated", "OPENCODE_API_KEY");
+  assert.equal((await h.call()).windows[0].utilization, 12);
+  assert.equal(calls, 2);
   h.dispose();
 });

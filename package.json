@@ -1,11 +1,11 @@
 {
   "name": "dsh-edu",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "scripts": {
     "test": "node --test"
   },
   "private": true,
-  "description": "DSH plugin: show GPT/Grok limits and DeepSeek/Zhipu balances in the composer dock.",
+  "description": "DSH plugin: show GPT/Grok/OpenCode Go limits and DeepSeek/Zhipu balances in the composer dock.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

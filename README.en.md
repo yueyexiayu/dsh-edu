@@ -4,7 +4,7 @@
 <p><strong>See the remaining allowance for the model you are actually using.</strong></p>
 <p>Session-aware quota readouts beneath the DeepSeek Harness composer.</p>
 <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-<p><a href="package.json">v0.1.4</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="package.json">v0.1.5</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
 <p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
 </div>
 
@@ -15,7 +15,7 @@ A reference implementation for a personal DSH desktop workflow, not a general bi
 ## Features
 
 <table><tr>
-<td width="33%"><strong>📊 Provider readouts</strong><br/><br/>Codex 5-hour/7-day limits, Grok/SuperGrok weekly limits, DeepSeek API balances and Zhipu cash balances.</td>
+<td width="33%"><strong>📊 Provider readouts</strong><br/><br/>Codex 5-hour/7-day limits, Grok/SuperGrok weekly limits, OpenCode Go 5-hour/weekly/monthly usage, DeepSeek API balances and Zhipu cash balances.</td>
 <td width="33%"><strong>🔄 Session-aware</strong><br/><br/>The official modelSelection.next projection wins. Model changes clear old numbers rather than borrowing a default account.</td>
 <td width="33%"><strong>🧩 Visible partial failure</strong><br/><br/>A failed Zhipu package query preserves confirmed cash with a warning. Unknown is not zero.</td>
 </tr><tr>
@@ -54,6 +54,7 @@ Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Select a 
 | Item | Behavior |
 | --- | --- |
 | GPT / Grok | `llm-pi-ai/openai-codex` / `llm-pi-ai/xai` OAuth; explicit API Key routes do not borrow another OAuth account |
+| OpenCode Go | When the route `baseURL` is `https://opencode.ai/inference/go/...`, the same `OPENCODE_API_KEY` reads `/zen/go/v1/usage`. Percentages only: no plan tier and no Zen cash balance |
 | Official DeepSeek API | Route `apiKeyEnv`, defaulting to `DEEPSEEK_API_KEY` |
 | pi-ai DeepSeek / Zhipu | Explicit reference → stored route Key → native reference; a missing explicit reference fails |
 | Zhipu references | `ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY` |
@@ -79,7 +80,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure and parser boundaries. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update validates documentation and layout only; product tests were not rerun and the desktop was not restarted.**
+Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure and parser boundaries. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and product tests and validated parsing against the real OpenCode Go usage endpoint. The desktop was not restarted, so the Host change is not yet loaded in the running app.**
 
 ## License
 
