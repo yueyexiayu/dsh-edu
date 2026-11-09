@@ -4,8 +4,8 @@
 <p><strong>See the remaining allowance for the model you are actually using.</strong></p>
 <p>Session-aware quota readouts beneath the DeepSeek Harness composer.</p>
 <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-<p><a href="package.json">v0.1.6</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
-<p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
+<p><a href="package.json">v0.1.7</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#model-parameters">Model parameters</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
 </div>
 
 ---
@@ -19,9 +19,11 @@ A reference implementation for a personal DSH desktop workflow, not a general bi
 <td width="33%"><strong>🔄 Session-aware</strong><br/><br/>The official modelSelection.next projection wins. Model changes clear old numbers rather than borrowing a default account.</td>
 <td width="33%"><strong>🧩 Visible partial failure</strong><br/><br/>A failed Zhipu package query preserves confirmed cash with a warning. Unknown is not zero.</td>
 </tr><tr>
-<td><strong>⏱ Bounded caching</strong><br/><br/>Successful provider/credential results cache for 3 minutes; concurrent requests share a query.</td>
+<td><strong>⏱ Bounded caching</strong><br/><br/>Successful provider/credential results default to a configurable 3-minute cache; concurrent requests share a query.</td>
 <td><strong>🛡 Host-only credentials</strong><br/><br/>Reuse DSH credentials without storing another token or reading other clients' authentication files.</td>
 <td><strong>🌙 Background pause</strong><br/><br/>Serial polling resumes immediately in the foreground, with short backoff for failed package queries.</td>
+</tr><tr>
+<td colspan="3"><strong>⚙️ Model parameters on the plugin page</strong><br/><br/>Tune refresh, cache, timeout, alert thresholds and readout visibility per model category on Plugins → Usage; later queries use saved values.</td>
 </tr></table>
 
 ## How it works
@@ -29,6 +31,16 @@ A reference implementation for a personal DSH desktop workflow, not a general bi
 ![The session's model selection resolves credential ownership before querying, caching and displaying quota or explicit errors.](docs/repo-assets/workflow.en.svg)
 
 The session projection takes priority over historical requests. Only an existing new session with no selection/request uses the default model. Missing sessions or failed projection services report errors rather than querying an unrelated account.
+
+## Model parameters
+
+The Usage plugin detail page configures the five model readout categories: Codex, Grok, OpenCode Go, DeepSeek and Zhipu.
+
+- Normal and unsupported-model refresh intervals, successful-result cache lifetime and upstream request timeout.
+- Whether each category is queried and shown, its display name, warning threshold and critical threshold.
+- Whether reset countdowns and refresh age are shown.
+
+Settings live in `$DSH_HOME/storages/dsh-edu/settings.json` and use revisions so concurrent windows cannot silently overwrite each other. They govern this plugin's quota requests and readout only; DSH model routes, credentials, model selection and request parameters remain owned by the official model settings. Disabling a category prevents this plugin from querying or showing it; switching to another enabled model refreshes immediately.
 
 ## Quick start
 
@@ -39,7 +51,7 @@ export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 git clone https://github.com/yueyexiayu/dsh-edu.git "$DSH_HOME/plugins/dsh-edu"
 ```
 
-Merge this entry into `$DSH_HOME/profiles/desktop/cordis.patch.yml`:
+If you install through the DSH plugin manager, enable it on its page. For a manual install, merge this entry into `$DSH_HOME/profiles/desktop/cordis.patch.yml`:
 
 ```yaml
 - insert:
@@ -47,7 +59,7 @@ Merge this entry into `$DSH_HOME/profiles/desktop/cordis.patch.yml`:
       name: ../../plugins/dsh-edu/lib/index.js
 ```
 
-Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Select a supported model and check the readout below the composer. A page refresh does not fully reload Host/Client code.
+Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Open Plugins → Usage → Model parameters, choose a supported model and check the readout below the composer. A page refresh does not fully reload Host/Client source code.
 
 ## Credentials and refresh
 
@@ -58,7 +70,7 @@ Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Select a 
 | Official DeepSeek API | Route `apiKeyEnv`, defaulting to `DEEPSEEK_API_KEY` |
 | pi-ai DeepSeek / Zhipu | Explicit reference → stored route Key → native reference; a missing explicit reference fails |
 | Zhipu references | `ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY` |
-| Foreground polling | Normally 2 seconds; unsupported providers 30 seconds; Client requests time out after 20 seconds |
+| Foreground polling | Defaults of 2 seconds for normal polling and 30 seconds for unsupported providers are configurable; Client requests have a 65-second cap covering up to two configurable serial upstream calls |
 | Package partial failure | `warning`, `state: partial_retry` and `retryAfterMs`; retry the failed part after about 30 seconds |
 
 <details>
@@ -80,7 +92,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure and parser boundaries. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 103 product tests and validated parsing against the real OpenCode Go usage endpoint for a shipped route with no `baseURL`. The desktop was not restarted, so the Host change is not yet loaded in the running app.**
+Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure, parser boundaries, revisioned model-setting saves, DSH bridge same-origin behavior, threshold display and the no-query behavior of a disabled category. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 109 product tests. The desktop was not restarted, so the running Host and plugin page have not loaded this change.**
 
 ## License
 

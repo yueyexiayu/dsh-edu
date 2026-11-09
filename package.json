@@ -1,6 +1,6 @@
 {
   "name": "dsh-edu",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "scripts": {
     "test": "node --test"
   },
@@ -21,7 +21,8 @@
     "client": {
       "platform": "web",
       "inject": [
-        "@deepseek-ai/dsh-client-ui-conversation"
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
       ]
     }
   }

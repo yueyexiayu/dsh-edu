@@ -4,8 +4,8 @@
 <p><strong>看清正在使用的模型，还剩多少额度。</strong></p>
 <p>DeepSeek Harness 输入框下方的会话感知额度读数。</p>
 <p><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
-<p><a href="package.json">v0.1.6</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
-<p><a href="#核心能力">核心能力</a> · <a href="#工作方式">工作方式</a> · <a href="#快速开始">快速开始</a> · <a href="#凭据与刷新">凭据与刷新</a> · <a href="#验证">验证</a></p>
+<p><a href="package.json">v0.1.7</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="#核心能力">核心能力</a> · <a href="#工作方式">工作方式</a> · <a href="#模型参数">模型参数</a> · <a href="#快速开始">快速开始</a> · <a href="#凭据与刷新">凭据与刷新</a> · <a href="#验证">验证</a></p>
 </div>
 
 ---
@@ -19,9 +19,11 @@
 <td width="33%"><strong>🔄 跟随会话切换</strong><br/><br/>官方 modelSelection.next 投影优先；切换模型清除旧数字，不混用默认账号。</td>
 <td width="33%"><strong>🧩 部分失败可见</strong><br/><br/>智谱资源包失败保留已确认现金，并显示警告；未知不显示为零。</td>
 </tr><tr>
-<td><strong>⏱ 有界缓存</strong><br/><br/>提供方与实际凭据成功结果缓存3分钟；同账号并发共用查询。</td>
+<td><strong>⏱ 有界缓存</strong><br/><br/>提供方与实际凭据成功结果默认缓存3分钟且可配置；同账号并发共用查询。</td>
 <td><strong>🛡 凭据留在 Host</strong><br/><br/>沿用 DSH credentials，不另存 token，不读取其他客户端认证文件。</td>
 <td><strong>🌙 后台暂停</strong><br/><br/>串行轮询、前台恢复立即刷新，资源包失败短退避，不无限重叠请求。</td>
+</tr><tr>
+<td colspan="3"><strong>⚙️ 插件页模型参数</strong><br/><br/>在「插件 → 额度」页面按模型类别调整刷新、缓存、超时、提醒阈值和读数显示；保存后后续查询即时使用。</td>
 </tr></table>
 
 ## 工作方式
@@ -29,6 +31,16 @@
 ![会话模型选择确定凭据归属，再查询提供方并缓存、显示额度或明确错误。](docs/repo-assets/workflow.zh-CN.svg)
 
 会话投影优先于历史模型；已存在但尚无选择或请求的新会话才采用默认模型。会话不存在或投影服务失败时明确报错，不查询无关默认账号。
+
+## 模型参数
+
+在「插件 → 额度」详情页可以设置 Codex、Grok、OpenCode Go、DeepSeek 和智谱五类模型读数：
+
+- 普通刷新间隔、未支持模型刷新间隔、成功读数缓存时间和上游请求超时。
+- 每类模型是否显示并查询、显示名称、提醒阈值和严重阈值。
+- 是否显示重置倒计时和上次刷新时间。
+
+参数保存在 `$DSH_HOME/storages/dsh-edu/settings.json`，使用修订号避免多个窗口互相覆盖。这里控制的是本插件的额度查询与读数显示；DSH 的模型路由、密钥、模型选择和请求参数仍由官方模型设置管理。关闭某类模型后，本插件不会查询或显示该类额度，切到其他已启用模型会立即刷新。
 
 ## 快速开始
 
@@ -39,7 +51,7 @@ export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 git clone https://github.com/yueyexiayu/dsh-edu.git "$DSH_HOME/plugins/dsh-edu"
 ```
 
-将以下项合并到 `$DSH_HOME/profiles/desktop/cordis.patch.yml`：
+已通过 DSH 插件管理器安装时可直接在插件页启用；手工安装时将以下项合并到 `$DSH_HOME/profiles/desktop/cordis.patch.yml`：
 
 ```yaml
 - insert:
@@ -47,7 +59,7 @@ git clone https://github.com/yueyexiayu/dsh-edu.git "$DSH_HOME/plugins/dsh-edu"
       name: ../../plugins/dsh-edu/lib/index.js
 ```
 
-不要覆盖其他插件。**⌘Q 完全退出 DSH 后重开**，选择受支持模型，在输入框下方核对读数；仅刷新页面不完整重载 Host/Client。
+不要覆盖其他插件。**⌘Q 完全退出 DSH 后重开**，进入「插件 → 额度 → 模型参数」设置读数，选择受支持模型后在输入框下方核对。仅刷新页面不完整重载 Host/Client 源码。
 
 ## 凭据与刷新
 
@@ -58,7 +70,7 @@ git clone https://github.com/yueyexiayu/dsh-edu.git "$DSH_HOME/plugins/dsh-edu"
 | DeepSeek 官方 API | 路由的 `apiKeyEnv`，默认 `DEEPSEEK_API_KEY` |
 | pi-ai DeepSeek / 智谱 | 显式引用 → 路由保存 Key → 原生凭据引用；显式引用缺失时失败 |
 | 智谱引用 | `ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY` |
-| 前台轮询 | 普通2秒；不支持提供方30秒；单次 Client 请求20秒上限 |
+| 前台轮询 | 默认普通2秒、不支持提供方30秒，均可配置；Client 请求65秒上限，覆盖可配置的两次串行上游请求 |
 | 资源包部分失败 | 返回 `warning`、`state: partial_retry` 与 `retryAfterMs`，约30秒后重试失败分项 |
 
 <details>
@@ -80,7 +92,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-产品测试使用模拟凭据与接口响应，不读取真实账号、不调用实际额度服务；覆盖切换、缓存、晚响应、部分失败和解析边界。历史0.1.2浏览器夹具验证不等于真实账号端到端验收。**本次已重跑语法检查与产品测试（103 项），并用真实 OpenCode Go 用量接口验证「无 baseURL 的内置路由」解析；桌面端尚未重启，当前运行中的 Host 未加载本次改动。**
+产品测试使用模拟凭据与接口响应，不读取真实账号、不调用实际额度服务；覆盖切换、缓存、晚响应、部分失败、解析边界，以及模型参数页的修订保存、DSH bridge 同源、阈值显示和禁用后停止查询。历史0.1.2浏览器夹具验证不等于真实账号端到端验收。**本次已重跑语法检查与产品测试（109 项）；桌面端尚未重启，当前运行中的 Host 和插件页未加载本次改动。**
 
 ## 许可
 

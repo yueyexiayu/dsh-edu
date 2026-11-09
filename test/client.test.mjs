@@ -36,7 +36,7 @@ function client({ hidden = false } = {}) {
     assert.equal(key, "modelSelection"); return selector ? selector(selection) : selection;
   } });
   exports.apply({ slots: {
-    inject(_slot, callback) { callback(); },
+    inject(slot, callback) { if (slot === "conversation.composer.dock") callback(); },
     register(_meta, render) {
       const supplied = props(); const element = render(supplied);
       assert.equal(element.props.sessionId, supplied.sessionId);
@@ -163,7 +163,7 @@ test("structured failures remain visible without an isSupported flag", async () 
 });
 
 test("hung requests time out visibly, retry serially and discard late replies", async () => {
-  const c = client(); c.advance(20000); await tick();
+  const c = client(); c.advance(65000); await tick();
   assert.match(text(c.render()), /超时/); assert.equal(c.requests[0].signal.aborted, true);
   c.advance(2000); assert.equal(c.requests.length, 2);
   c.requests[1].resolve(quota(72)); await tick(); c.requests[0].resolve(quota(11)); await tick();
@@ -241,4 +241,28 @@ test("logout and credential epoch changes drop the previous successful reading",
   assert.match(text(epoch.render()), /已切换/);
   assert.doesNotMatch(text(epoch.render()), /12\.50/);
   epoch.dispose();
+});
+
+test("model display parameters control thresholds, countdowns and refresh age", async () => {
+  const c = client();
+  c.requests[0].resolve({
+    ok: true,
+    isSupported: true,
+    queriedAt: Date.now(),
+    refreshAfterMs: 5000,
+    display: {
+      label: "Codex 自定义",
+      warningPercent: 30,
+      criticalPercent: 60,
+      showResetCountdown: false,
+      showQueriedAt: false,
+    },
+    windows: [{ key: "weekly", label: "7d", utilization: 45, resetsAt: new Date(Date.now() + 3600000).toISOString() }],
+  }); await tick();
+  const rendered = c.render();
+  assert.match(text(rendered), /Codex 自定义7d 45%/);
+  assert.match(JSON.stringify(rendered), /deu-pct-warn/);
+  assert.doesNotMatch(text(rendered), /1h0m|刚刚/);
+  c.advance(4999); assert.equal(c.requests.length, 1);
+  c.advance(1); assert.equal(c.requests.length, 2); c.dispose();
 });
