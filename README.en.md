@@ -4,8 +4,8 @@
 <p><strong>See the remaining allowance for the model you are actually using.</strong></p>
 <p>Session-aware quota readouts beneath the DeepSeek Harness composer.</p>
 <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-<p><a href="package.json">v0.1.7</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
-<p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#model-parameters">Model parameters</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
+<p><a href="package.json">v0.1.8</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#model-platforms">Model platforms</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
 </div>
 
 ---
@@ -23,7 +23,7 @@ A reference implementation for a personal DSH desktop workflow, not a general bi
 <td><strong>🛡 Host-only credentials</strong><br/><br/>Reuse DSH credentials without storing another token or reading other clients' authentication files.</td>
 <td><strong>🌙 Background pause</strong><br/><br/>Serial polling resumes immediately in the foreground, with short backoff for failed package queries.</td>
 </tr><tr>
-<td colspan="3"><strong>⚙️ Model parameters on the plugin page</strong><br/><br/>Tune refresh, cache, timeout, alert thresholds and readout visibility per model category on Plugins → Usage; later queries use saved values.</td>
+<td colspan="3"><strong>⚙️ Model platforms on the plugin page</strong><br/><br/>Add, remove and configure model platforms plus refresh, cache, timeout, alert thresholds and readout visibility on Plugins → Usage; saved real queries synchronize immediately.</td>
 </tr></table>
 
 ## How it works
@@ -32,15 +32,16 @@ A reference implementation for a personal DSH desktop workflow, not a general bi
 
 The session projection takes priority over historical requests. Only an existing new session with no selection/request uses the default model. Missing sessions or failed projection services report errors rather than querying an unrelated account.
 
-## Model parameters
+## Model platforms
 
-The Usage plugin detail page configures the five model readout categories: Codex, Grok, OpenCode Go, DeepSeek and Zhipu.
+The Usage plugin detail page adds, removes, enables, disables and renames model platforms. Codex, Grok, OpenCode Go, DeepSeek and Zhipu start as built-in platforms and can be re-added after removal.
 
 - Normal and unsupported-model refresh intervals, successful-result cache lifetime and upstream request timeout.
-- Whether each category is queried and shown, its display name, warning threshold and critical threshold.
+- Whether each platform is queried and shown, its display name, warning threshold and critical threshold.
 - Whether reset countdowns and refresh age are shown.
+- Custom balance platforms: bind a configured DSH provider and enter an HTTPS balance endpoint, Bearer or x-api-key authentication, and JSON paths for balance and currency. The API key comes from that DSH provider route and is never written to plugin settings or returned to the browser.
 
-Settings live in `$DSH_HOME/storages/dsh-edu/settings.json` and use revisions so concurrent windows cannot silently overwrite each other. They govern this plugin's quota requests and readout only; DSH model routes, credentials, model selection and request parameters remain owned by the official model settings. Disabling a category prevents this plugin from querying or showing it; switching to another enabled model refreshes immediately.
+Platforms live in `$DSH_HOME/storages/dsh-edu/settings.json` and use revisions so concurrent windows cannot silently overwrite each other. Existing fixed-category settings migrate automatically. Saving an add, removal or edit invalidates old query caches; a removed or disabled platform disappears, while a newly bound active provider makes a real request on the next configured poll. Credential and account changes also discard old readouts. DSH model routes, credentials, model selection and request parameters remain owned by the official model settings.
 
 ## Quick start
 
@@ -59,7 +60,7 @@ If you install through the DSH plugin manager, enable it on its page. For a manu
       name: ../../plugins/dsh-edu/lib/index.js
 ```
 
-Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Open Plugins → Usage → Model parameters, choose a supported model and check the readout below the composer. A page refresh does not fully reload Host/Client source code.
+Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Open Plugins → Usage → Model platforms, add or remove a platform, select its model and check the real readout below the composer. A page refresh does not fully reload Host/Client source code.
 
 ## Credentials and refresh
 
@@ -92,7 +93,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure, parser boundaries, revisioned model-setting saves, DSH bridge same-origin behavior, threshold display and the no-query behavior of a disabled category. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 109 product tests. The desktop was not restarted, so the running Host and plugin page have not loaded this change.**
+Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure, parser boundaries, platform add/remove, cross-window synchronization, legacy migration, the custom-balance request path, explicit/native credential precedence, credential-change invalidation, DSH bridge same-origin behavior, threshold display and disabled-platform no-query behavior. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 115 product tests. The v0.1.7 page is loaded in the desktop app, but this v0.1.8 Host/Client change requires a full quit and reopen before it takes effect.**
 
 ## License
 

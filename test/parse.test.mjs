@@ -7,6 +7,7 @@ import {
   oauthFromRecord,
   opencodeGoRouteFor,
   parseDeepSeekBalance,
+  parseCustomBalance,
   parseGrokBilling,
   parseOpencodeGoUsage,
   parseUsageBody,
@@ -16,6 +17,18 @@ import {
   windowName,
   zaiRouteFor,
 } from "../lib/parse.js";
+
+test("custom balance mapping is strict and accepts bracketed paths", () => {
+  assert.deepEqual(parseCustomBalance({ data: { accounts: [{ remaining: "8.25", currency: "usd" }] } }, {
+    totalPath: "$.data.accounts[0].remaining", currencyPath: "data.accounts[0].currency", currency: "CNY",
+  }), {
+    ok: true,
+    balance: { currency: "USD", total: 8.25, toppedUp: null, granted: null, frozen: null, spent: null, packages: [], available: true },
+  });
+  assert.equal(parseCustomBalance({ data: { balance: "NaN" } }, { totalPath: "data.balance", currency: "USD" }).ok, false);
+  assert.equal(parseCustomBalance({ data: {} }, { totalPath: "data.balance", currencyPath: "data.currency", currency: "USD" }).ok, false);
+  assert.equal(parseCustomBalance({}, { totalPath: "__proto__.polluted", currency: "USD" }).ok, false);
+});
 
 test("windowName maps 5h and weekly seconds", () => {
   assert.deepEqual(windowName(18000), { key: "5h", label: "5小时" });

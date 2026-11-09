@@ -1,1 +1,1 @@
-{ "meta": { "title": "额度", "description": "在输入框附近显示 GPT、Grok、OpenCode Go 的额度以及 DeepSeek、智谱的余额，并可在插件页调整模型读数参数。" } }
+{ "meta": { "title": "额度", "description": "显示模型平台的额度或余额，并可在插件页添加、删除平台、配置自定义余额接口和读数参数。" } }

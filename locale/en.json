@@ -1,1 +1,1 @@
-{ "meta": { "title": "Usage", "description": "Show GPT, Grok and OpenCode Go limits and DeepSeek and Zhipu balances near the composer, with per-model readout parameters on the plugin page." } }
+{ "meta": { "title": "Usage", "description": "Show model-platform limits or balances, with add/remove controls, custom balance endpoints and per-platform readout parameters on the plugin page." } }
