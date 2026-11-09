@@ -4,7 +4,7 @@
 <p><strong>See the remaining allowance for the model you are actually using.</strong></p>
 <p>Session-aware quota readouts beneath the DeepSeek Harness composer.</p>
 <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-<p><a href="package.json">v0.1.8</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="package.json">v0.1.9</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
 <p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#model-platforms">Model platforms</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
 </div>
 
@@ -93,7 +93,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure, parser boundaries, platform add/remove, cross-window synchronization, legacy migration, the custom-balance request path, explicit/native credential precedence, credential-change invalidation, DSH bridge same-origin behavior, threshold display and disabled-platform no-query behavior. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 115 product tests. The v0.1.7 page is loaded in the desktop app, but this v0.1.8 Host/Client change requires a full quit and reopen before it takes effect.**
+Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure, parser boundaries, platform add/remove, add-control ordering, cross-window synchronization, legacy migration, the custom-balance request path, explicit/native credential precedence, credential-change invalidation, DSH bridge same-origin behavior, threshold display and disabled-platform no-query behavior. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 115 product tests. The v0.1.8 page is loaded in the desktop app, but this v0.1.9 Client change requires a full quit and reopen before it takes effect.**
 
 ## License
 

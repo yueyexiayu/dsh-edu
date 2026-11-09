@@ -117,6 +117,8 @@ test("plugin page adds a provider-backed platform and removes a built-in platfor
   client.requests[0].resolve(response({ ok: true, settings: structuredClone(DEFAULT_SETTINGS), revision: "r1" }));
   await tick();
   let tree = client.render();
+  const ordered = nodes(tree, (node) => node.type === "article" || node.props["data-action"] === "add-adapter");
+  assert.equal(ordered[0].props["data-action"], "add-adapter");
   const addSelect = nodes(tree, (node) => node.props["data-action"] === "add-adapter")[0];
   addSelect.props.onChange({ target: { value: "balance" } });
   assert.equal(client.requests[1].url, "/api/dsh-edu/platforms");
