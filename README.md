@@ -1,10 +1,10 @@
 <div align="center">
 <img src="docs/repo-assets/hero.svg" width="100%" alt="当前模型路由、官方额度和余额显示的原创示意，非真实账号截图" />
-<h1>dsh-edu · 额度与余额</h1>
+<h1>额度</h1>
 <p><strong>看清正在使用的模型，还剩多少额度。</strong></p>
 <p>DeepSeek Harness 输入框下方的会话感知额度读数。</p>
 <p><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
-<p><a href="package.json">v0.1.10</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="package.json">v0.1.11</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
 <p><a href="#核心能力">核心能力</a> · <a href="#工作方式">工作方式</a> · <a href="#模型平台">模型平台</a> · <a href="#快速开始">快速开始</a> · <a href="#凭据与刷新">凭据与刷新</a> · <a href="#验证">验证</a></p>
 </div>
 
@@ -23,7 +23,7 @@
 <td><strong>🛡 凭据留在 Host</strong><br/><br/>沿用 DSH credentials，不另存 token，不读取其他客户端认证文件。</td>
 <td><strong>🌙 后台暂停</strong><br/><br/>串行轮询、前台恢复立即刷新，资源包失败短退避，不无限重叠请求。</td>
 </tr><tr>
-<td colspan="3"><strong>⚙️ 插件页模型平台</strong><br/><br/>在「插件 → dsh-edu · 额度」页面添加、删除和配置模型平台，并调整刷新、缓存、超时、提醒阈值和读数显示；保存后真实查询即时同步。</td>
+<td colspan="3"><strong>⚙️ 插件页模型平台</strong><br/><br/>在「插件 → 额度」页面添加、删除和配置模型平台，并调整刷新、缓存、超时、提醒阈值和读数显示；保存后真实查询即时同步。</td>
 </tr></table>
 
 ## 工作方式
@@ -34,7 +34,7 @@
 
 ## 模型平台
 
-在「插件 → dsh-edu · 额度」详情页可以添加、删除、启停和重命名模型平台。初始提供 Codex、Grok、OpenCode Go、DeepSeek 和智谱五个内置平台；删除后可重新添加。
+在「插件 → 额度」详情页可以添加、删除、启停和重命名模型平台。初始提供 Codex、Grok、OpenCode Go、DeepSeek 和智谱五个内置平台；删除后可重新添加。
 
 - 普通刷新间隔、未支持模型刷新间隔、成功读数缓存时间和上游请求超时。
 - 每个平台是否显示并查询、显示名称、提醒阈值和严重阈值。
@@ -60,7 +60,7 @@ git clone https://github.com/yueyexiayu/dsh-edu.git "$DSH_HOME/plugins/dsh-edu"
       name: ../../plugins/dsh-edu/lib/index.js
 ```
 
-不要覆盖其他插件。**⌘Q 完全退出 DSH 后重开**，进入「插件 → dsh-edu · 额度 → 模型平台」添加或删除平台，选择对应模型后在输入框下方核对真实读数。仅刷新页面不完整重载 Host/Client 源码。
+不要覆盖其他插件。**⌘Q 完全退出 DSH 后重开**，进入「插件 → 额度 → 模型平台」添加或删除平台，选择对应模型后在输入框下方核对真实读数。仅刷新页面不完整重载 Host/Client 源码。
 
 ## 凭据与刷新
 
@@ -93,7 +93,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-产品测试使用模拟凭据和接口响应，不读取真实账号、不调用实际额度服务；覆盖切换、缓存、晚响应、部分失败、解析边界、平台增删、添加入口顺序、跨窗口同步、旧设置迁移、自定义余额真实请求路径、显式/原生凭据优先级、凭据切换失效、DSH bridge 同源和禁用后停止查询。历史0.1.2浏览器夹具验证不等于真实账号端到端验收。**本次已重跑语法检查与产品测试（116 项）；v0.1.8 插件页已在桌面端加载，但本次 v0.1.10 Client 调整仍需完全退出并重开 DSH 后才生效。**
+产品测试使用模拟凭据和接口响应，不读取真实账号、不调用实际额度服务；覆盖切换、缓存、晚响应、部分失败、解析边界、平台增删、添加入口顺序、跨窗口同步、旧设置迁移、自定义余额真实请求路径、显式/原生凭据优先级、凭据切换失效、DSH bridge 同源和禁用后停止查询。历史0.1.2浏览器夹具验证不等于真实账号端到端验收。**本次已重跑语法检查与产品测试（116 项）；v0.1.8 插件页已在桌面端加载，但本次 v0.1.11 Client 调整仍需完全退出并重开 DSH 后才生效。**
 
 ## 许可
 

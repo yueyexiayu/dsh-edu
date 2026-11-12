@@ -73,11 +73,11 @@ function response(body, status = 200) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-test("plugin listing names keep the dsh-edu identifier visible", () => {
+test("plugin listing names use the visible name while retaining the dsh-edu component id", () => {
   const zh = JSON.parse(readFileSync(new URL("../locale/zh.json", import.meta.url), "utf8"));
   const en = JSON.parse(readFileSync(new URL("../locale/en.json", import.meta.url), "utf8"));
-  assert.equal(zh.meta.title, "dsh-edu · 额度");
-  assert.equal(en.meta.title, "dsh-edu · Usage");
+  assert.equal(zh.meta.title, "额度");
+  assert.equal(en.meta.title, "Usage");
 });
 
 test("plugin page edits and saves model parameters through the current revision", async () => {
@@ -89,7 +89,7 @@ test("plugin page edits and saves model parameters through the current revision"
   client.requests[0].resolve(response({ ok: true, settings: initial, revision: "r1" }));
   await tick();
   const loaded = client.render();
-  assert.equal(nodes(loaded, (node) => node.type === "h3").map((node) => node.children[0]).join(""), "dsh-edu · 额度模型平台");
+  assert.equal(nodes(loaded, (node) => node.type === "h3").map((node) => node.children[0]).join(""), "额度");
 
   const poll = nodes(loaded, (node) => node.props["data-setting"] === "pollIntervalMs")[0];
   poll.props.onChange({ target: { value: "5000" } });

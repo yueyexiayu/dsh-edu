@@ -1,10 +1,10 @@
 <div align="center">
 <img src="docs/repo-assets/hero.svg" width="100%" alt="Original concept illustration of a model route, provider quota and balance display; not a real account screenshot" />
-<h1>dsh-edu · Quota and balances</h1>
+<h1>Usage</h1>
 <p><strong>See the remaining allowance for the model you are actually using.</strong></p>
 <p>Session-aware quota readouts beneath the DeepSeek Harness composer.</p>
 <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-<p><a href="package.json">v0.1.10</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
+<p><a href="package.json">v0.1.11</a> · <a href="LICENSE">MIT</a> · DSH desktop plugin</p>
 <p><a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#model-platforms">Model platforms</a> · <a href="#quick-start">Quick start</a> · <a href="#credentials-and-refresh">Credentials and refresh</a> · <a href="#validation">Validation</a></p>
 </div>
 
@@ -60,7 +60,7 @@ If you install through the DSH plugin manager, enable it on its page. For a manu
       name: ../../plugins/dsh-edu/lib/index.js
 ```
 
-Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Open Plugins → dsh-edu · Usage → Model platforms, add or remove a platform, select its model and check the real readout below the composer. A page refresh does not fully reload Host/Client source code.
+Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Open Plugins → Usage → Model platforms, add or remove a platform, select its model and check the real readout below the composer. A page refresh does not fully reload Host/Client source code.
 
 ## Credentials and refresh
 
@@ -93,7 +93,7 @@ for file in lib/*.js; do node --check "$file" || exit 1; done
 node --test
 ```
 
-Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure, parser boundaries, platform add/remove, add-control ordering, cross-window synchronization, legacy migration, the custom-balance request path, explicit/native credential precedence, credential-change invalidation, DSH bridge same-origin behavior, threshold display and disabled-platform no-query behavior. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 116 product tests. The v0.1.8 page is loaded in the desktop app, but this v0.1.10 Client change requires a full quit and reopen before it takes effect.**
+Product tests use mock credentials and responses, not real accounts or quota endpoints. They cover switching, caches, late responses, partial failure, parser boundaries, platform add/remove, add-control ordering, cross-window synchronization, legacy migration, the custom-balance request path, explicit/native credential precedence, credential-change invalidation, DSH bridge same-origin behavior, threshold display and disabled-platform no-query behavior. Historical 0.1.2 browser fixtures are not real-account end-to-end acceptance. **This update reran syntax checks and all 116 product tests. The v0.1.8 page is loaded in the desktop app, but this v0.1.11 Client change requires a full quit and reopen before it takes effect.**
 
 ## License
 
