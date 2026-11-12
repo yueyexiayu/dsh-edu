@@ -60,7 +60,7 @@ If you install through the DSH plugin manager, enable it on its page. For a manu
       name: ../../plugins/dsh-edu/lib/index.js
 ```
 
-Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Open Plugins → Usage → Model platforms, add or remove a platform, select its model and check the real readout below the composer. A page refresh does not fully reload Host/Client source code.
+Keep other plugins intact. **Quit DSH fully with ⌘Q and reopen it.** Open Plugins → dsh-edu · Usage → Model platforms, add or remove a platform, select its model and check the real readout below the composer. A page refresh does not fully reload Host/Client source code.
 
 ## Credentials and refresh
 
